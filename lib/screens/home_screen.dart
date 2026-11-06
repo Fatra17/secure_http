@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../services/secure_storage_service.dart';
+import 'login_screen.dart';
 import 'user_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -13,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _tokenController = TextEditingController();
   String? _savedToken;
   bool _hasToken = false;
+
   @override
   void initState() {
     super.initState();
@@ -84,19 +88,98 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Section 1: Secure Storage
+              // Card Status Autentikasi Login (Latihan 1)
+              Card(
+                color: _hasToken ? Colors.green[50] : Colors.amber[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _hasToken ? Icons.verified_user : Icons.no_accounts,
+                            color: _hasToken
+                                ? Colors.green[800]
+                                : Colors.amber[800],
+                            size: 32,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _hasToken
+                                      ? 'Status: Terautentikasi (Logged In)'
+                                      : 'Status: Belum Login',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _hasToken
+                                        ? Colors.green[800]
+                                        : Colors.amber[900],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _hasToken
+                                      ? 'Token: ${_savedToken != null && _savedToken!.length > 10 ? "${_savedToken!.substring(0, 10)}..." : _savedToken}'
+                                      : 'Silakan login untuk mendapatkan token.',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (_hasToken) {
+                              await _deleteToken();
+                            } else {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                              );
+                              _checkToken(); // Refresh status setelah kembali dari LoginScreen
+                            }
+                          },
+                          icon: Icon(_hasToken ? Icons.logout : Icons.login),
+                          label: Text(
+                            _hasToken ? 'Logout' : 'Buka Halaman Login',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _hasToken
+                                ? Colors.red
+                                : Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Section 1: Secure Storage Manual
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.lock, color: Colors.deepPurple),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Secure Storage',
+                          Icon(Icons.lock, color: Colors.deepPurple),
+                          SizedBox(width: 8),
+                          Text(
+                            'Secure Storage Manual',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -143,44 +226,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _hasToken ? Colors.green[50] : Colors.red[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _hasToken ? Colors.green : Colors.red,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _hasToken ? Icons.check_circle : Icons.cancel,
-                              color: _hasToken ? Colors.green : Colors.red,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _hasToken
-                                    ? 'Token tersimpan: ${_savedToken!.length > 10 ? "${_savedToken!.substring(0, 10)}..." : _savedToken}'
-                                    : 'Belum ada token tersimpan',
-                                style: TextStyle(
-                                  color: _hasToken
-                                      ? Colors.green[800]
-                                      : Colors.red[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+
               // Section 2: HTTP Request
               Card(
                 child: Padding(
@@ -188,11 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.cloud, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.cloud, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text(
                             'HTTP Request',
                             style: TextStyle(
                               fontSize: 18,
@@ -232,6 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
               // Section 3: Catatan Keamanan
               Card(
                 color: Colors.amber[50],
