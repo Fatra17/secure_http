@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../services/secure_storage_service.dart';
 import 'login_screen.dart';
 import 'user_list_screen.dart';
@@ -14,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final SecureStorageService _storageService = SecureStorageService();
   final TextEditingController _tokenController = TextEditingController();
+
   String? _savedToken;
   bool _hasToken = false;
 
@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // 1. Memeriksa keberadaan token di Secure Storage
   Future<void> _checkToken() async {
     final hasToken = await _storageService.hasToken();
     final token = await _storageService.getToken();
@@ -38,6 +39,68 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // 2. Fungsi Logout dengan Konfirmasi Dialog (Latihan 2)
+  Future<void> _handleLogout() async {
+    // a. Tampilkan Dialog Konfirmasi
+    final bool? shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Konfirmasi Logout'),
+            ],
+          ),
+          content: const Text(
+            'Apakah Anda yakin ingin keluar? Token yang tersimpan di secure storage akan dihapus.',
+          ),
+          actions: [
+            // Tombol Batal
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            // Tombol Logout
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // b. Jika pengguna memilih "Logout" (true)
+    if (shouldLogout == true) {
+      // Hapus token dari secure storage
+      await _storageService.deleteToken();
+
+      if (mounted) {
+        // Tampilkan pesan pemberitahuan
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda telah logout. Token berhasil dihapus.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+
+        // Navigasi kembali ke LoginScreen dan hapus semua tumpukan route
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  // 3. Simpan token manual
   Future<void> _saveToken() async {
     if (_tokenController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 4. Hapus token manual
   Future<void> _deleteToken() async {
     await _storageService.deleteToken();
     await _checkToken();
@@ -81,6 +145,15 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Secure Storage & HTTP'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        actions: [
+          // Tombol Logout pada AppBar (Hanya aktif jika user sudah login / ada token)
+          if (_hasToken)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+              onPressed: _handleLogout,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -88,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Card Status Autentikasi Login (Latihan 1)
+              // Section Status Autentikasi
               Card(
                 color: _hasToken ? Colors.green[50] : Colors.amber[50],
                 child: Padding(
@@ -136,27 +209,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () async {
+                          onPressed: () {
                             if (_hasToken) {
-                              await _deleteToken();
+                              _handleLogout(); // Panggil fungsi logout dengan konfirmasi
                             } else {
-                              await Navigator.push(
+                              Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => const LoginScreen(),
                                 ),
                               );
-                              _checkToken(); // Refresh status setelah kembali dari LoginScreen
                             }
                           },
                           icon: Icon(_hasToken ? Icons.logout : Icons.login),
-                          label: Text(
-                            _hasToken ? 'Logout' : 'Buka Halaman Login',
-                          ),
+                          label: Text(_hasToken ? 'Logout' : 'Ke Halaman Login'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _hasToken
-                                ? Colors.red
-                                : Colors.deepPurple,
+                            backgroundColor:
+                                _hasToken ? Colors.red : Colors.deepPurple,
                             foregroundColor: Colors.white,
                           ),
                         ),
