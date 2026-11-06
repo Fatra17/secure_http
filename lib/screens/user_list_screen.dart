@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
-import '../models/post.dart';
+import '../models/user.dart';
 import '../services/api_service.dart';
+import '../widgets/user_card.dart';
 
-class PostListScreen extends StatefulWidget {
-  const PostListScreen({super.key});
+class UserListScreen extends StatefulWidget {
+  const UserListScreen({super.key});
 
   @override
-  State<PostListScreen> createState() => _PostListScreenState();
+  State<UserListScreen> createState() => _UserListScreenState();
 }
 
-class _PostListScreenState extends State<PostListScreen> {
+class _UserListScreenState extends State<UserListScreen> {
   final ApiService _apiService = ApiService();
-  List<Post> _posts = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  // Deklarasi variabel State yang sebelumnya hilang
+  List<User> _users = [];
+  List<User> _filteredUsers = [];
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadPosts();
+    _loadUsers();
   }
 
-  // Fungsi untuk memanggil API service dan memperbarui State
-  Future<void> _loadPosts() async {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUsers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
-      final posts = await _apiService.getPosts();
+      final users = await _apiService.getUsers();
       setState(() {
-        _posts = posts;
+        _users = users;
+        _filteredUsers = users;
         _isLoading = false;
       });
     } catch (e) {
@@ -41,17 +52,29 @@ class _PostListScreenState extends State<PostListScreen> {
     }
   }
 
+  void _filterUsers(String query) {
+    final filtered = _users.where((user) {
+      final nameMatches = user.name.toLowerCase().contains(query.toLowerCase());
+      final emailMatches = user.email.toLowerCase().contains(query.toLowerCase());
+      return nameMatches || emailMatches;
+    }).toList();
+
+    setState(() {
+      _filteredUsers = filtered;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Posts'),
-        backgroundColor: Colors.teal, // Menggunakan warna berbeda agar mudah dibedakan
+        title: const Text('Daftar Pengguna'),
+        backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadPosts,
+            onPressed: _loadUsers,
             tooltip: 'Muat ulang',
           ),
         ],
@@ -61,7 +84,6 @@ class _PostListScreenState extends State<PostListScreen> {
   }
 
   Widget _buildBody() {
-    // Kondisi 1: Sedang memuat (Loading)
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -69,13 +91,12 @@ class _PostListScreenState extends State<PostListScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Memuat data posts...'),
+            Text('Memuat data...'),
           ],
         ),
       );
     }
 
-    // Kondisi 2: Terjadi Error
     if (_errorMessage != null) {
       return Center(
         child: Padding(
@@ -90,14 +111,10 @@ class _PostListScreenState extends State<PostListScreen> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
-              ),
+              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loadPosts,
+                onPressed: _loadUsers,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Coba Lagi'),
               ),
@@ -107,42 +124,81 @@ class _PostListScreenState extends State<PostListScreen> {
       );
     }
 
-    // Kondisi 3: Data kosong
-    if (_posts.isEmpty) {
-      return const Center(child: Text('Tidak ada data posts'));
-    }
-
-    // Kondisi 4: Sukses memuat data
-    return RefreshIndicator(
-      onRefresh: _loadPosts,
-      child: ListView.builder(
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.teal,
-                child: Text(
-                  '${post.id}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-              title: Text(
-                post.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                post.body,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _searchController,
+            onChanged: _filterUsers,
+            decoration: InputDecoration(
+              hintText: 'Cari nama atau email...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _filterUsers('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
               ),
             ),
-          );
-        },
+          ),
+        ),
+        Expanded(
+          child: _filteredUsers.isEmpty
+              ? const Center(child: Text('Tidak ada pengguna yang cocok'))
+              : RefreshIndicator(
+                  onRefresh: _loadUsers,
+                  child: ListView.builder(
+                    itemCount: _filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = _filteredUsers[index];
+                      return UserCard(
+                        user: user,
+                        onTap: () => _showUserDetail(user),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showUserDetail(User user) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              user.name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Username: ${user.username}'),
+            Text('Email: ${user.email}'),
+            Text('Telepon: ${user.phone}'),
+            Text('Website: ${user.website}'),
+            Text('Perusahaan: ${user.companyName}'),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
