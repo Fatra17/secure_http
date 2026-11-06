@@ -1,39 +1,41 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
+import '../models/post.dart';
 import '../services/api_service.dart';
-import '../widgets/user_card.dart';
 
-class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
+class PostListScreen extends StatefulWidget {
+  const PostListScreen({super.key});
+
   @override
-  State<UserListScreen> createState() => _UserListScreenState();
+  State<PostListScreen> createState() => _PostListScreenState();
 }
 
-class _UserListScreenState extends State<UserListScreen> {
+class _PostListScreenState extends State<PostListScreen> {
   final ApiService _apiService = ApiService();
-  List<User> _users = [];
+  List<Post> _posts = [];
   bool _isLoading = true;
   String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _loadPosts();
   }
 
-  Future<void> _loadUsers() async {
+  // Fungsi untuk memanggil API service dan memperbarui State
+  Future<void> _loadPosts() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
-      final users = await _apiService.getUsers();
+      final posts = await _apiService.getPosts();
       setState(() {
-        _users = users;
+        _posts = posts;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
@@ -43,13 +45,13 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Pengguna'),
-        backgroundColor: Colors.deepPurple,
+        title: const Text('Daftar Posts'),
+        backgroundColor: Colors.teal, // Menggunakan warna berbeda agar mudah dibedakan
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadUsers,
+            onPressed: _loadPosts,
             tooltip: 'Muat ulang',
           ),
         ],
@@ -59,7 +61,7 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   Widget _buildBody() {
-    // Loading state
+    // Kondisi 1: Sedang memuat (Loading)
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -67,12 +69,13 @@ class _UserListScreenState extends State<UserListScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Memuat data...'),
+            Text('Memuat data posts...'),
           ],
         ),
       );
     }
-    // Error state
+
+    // Kondisi 2: Terjadi Error
     if (_errorMessage != null) {
       return Center(
         child: Padding(
@@ -94,7 +97,7 @@ class _UserListScreenState extends State<UserListScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loadUsers,
+                onPressed: _loadPosts,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Coba Lagi'),
               ),
@@ -103,57 +106,43 @@ class _UserListScreenState extends State<UserListScreen> {
         ),
       );
     }
-    // Empty state
-    if (_users.isEmpty) {
-      return const Center(child: Text('Tidak ada data pengguna'));
-    }
-    // Success state
-    return RefreshIndicator(
-      onRefresh: _loadUsers,
-      child: ListView.builder(
-        itemCount: _users.length,
-        itemBuilder: (context, index) {
-          final user = _users[index];
-          return UserCard(
-            user: user,
-            onTap: () {
-              _showUserDetail(user);
-            },
-          );
-        },
-      ),
-    );
-  }
 
-  void _showUserDetail(User user) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              user.name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text('Username: ${user.username}'),
-            Text('Email: ${user.email}'),
-            Text('Telepon: ${user.phone}'),
-            Text('Website: ${user.website}'),
-            Text('Perusahaan: ${user.companyName}'),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Tutup'),
+    // Kondisi 3: Data kosong
+    if (_posts.isEmpty) {
+      return const Center(child: Text('Tidak ada data posts'));
+    }
+
+    // Kondisi 4: Sukses memuat data
+    return RefreshIndicator(
+      onRefresh: _loadPosts,
+      child: ListView.builder(
+        itemCount: _posts.length,
+        itemBuilder: (context, index) {
+          final post = _posts[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.teal,
+                child: Text(
+                  '${post.id}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+              title: Text(
+                post.title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                post.body,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

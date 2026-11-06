@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/secure_storage_service.dart';
 import 'login_screen.dart';
 import 'user_list_screen.dart';
+import 'post_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,9 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // 2. Fungsi Logout dengan Konfirmasi Dialog (Latihan 2)
   Future<void> _handleLogout() async {
-    // a. Tampilkan Dialog Konfirmasi
     final bool? shouldLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -76,13 +75,10 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    // b. Jika pengguna memilih "Logout" (true)
     if (shouldLogout == true) {
-      // Hapus token dari secure storage
       await _storageService.deleteToken();
 
       if (mounted) {
-        // Tampilkan pesan pemberitahuan
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Anda telah logout. Token berhasil dihapus.'),
@@ -90,7 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
 
-        // Navigasi kembali ke LoginScreen dan hapus semua tumpukan route
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -146,7 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
-          // Tombol Logout pada AppBar (Hanya aktif jika user sudah login / ada token)
           if (_hasToken)
             IconButton(
               icon: const Icon(Icons.logout),
@@ -211,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () {
                             if (_hasToken) {
-                              _handleLogout(); // Panggil fungsi logout dengan konfirmasi
+                              _handleLogout();
                             } else {
                               Navigator.pushReplacement(
                                 context,
@@ -342,6 +336,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: const Text('Lihat Daftar Pengguna'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PostListScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.article),
+                          label: const Text('Lihat Daftar Posts'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
